@@ -1,0 +1,32 @@
+#total_votes
+{
+	font-size:30px;
+	color:#FE2E2E;
+	font-weight:bold;
+}
+.div
+{
+	/*border:1px solid #E6E6E6;*/
+	clear:both;
+	margin-top:20px;
+	height:100px;
+	width:400px;
+	padding:10px;
+	/*margin-left:300px;*/
+	border-radius:3px;
+}
+.div p
+{
+	margin:0px;
+	font-size:20px;
+	text-align:left;
+	color:#E6E6E6;
+}
+img.php
+{
+	margin-top:10px;
+	width:30px;
+	height:30px;
+	float:left;
+	
+}
