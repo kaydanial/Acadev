@@ -82,6 +82,8 @@ class SiteController extends Controller
         $store_name = [];
         $store_data = [];
         $event = [];
+        $queryCount1 = Event::find();
+        $results1 = [];
 
 
         $pages = [];
@@ -92,77 +94,94 @@ class SiteController extends Controller
         if ($model->load(Yii::$app->request->get()) && $model->validate())
         {
 
-            $queryGetFaculty = Profile::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
-            $queryGetPreference = Preferences::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
-
-            $facultyId = $queryGetFaculty->all();
-            $preference = new Preferences();
-
-            foreach ($queryGetPreference->all() as $a => $b){
-                $preference = $b;
-            }
+            if(Yii::$app->user->identity != null) {
 
 
-            foreach ($facultyId as $a => $b) {
-                $fac = $b->faculty_id;
-            }
+                $queryGetFaculty = Profile::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
+                $queryGetPreference = Preferences::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
 
-            $queryGetFacultyUser = Profile::find()
-                ->select(['user_id'])
-                ->where(['=', 'faculty_id', $fac])
-                ->andWhere(['!=', 'user_id', Yii::$app->user->identity->getId()]);
+                $facultyId = $queryGetFaculty->all();
+                $preference = new Preferences();
+                $count = 0;
 
-            foreach ($queryGetFacultyUser->all() as $a => $b) {
-                $key = $b->user_id;
-
-                $queryName = Profile::find()
-                    ->select(['name'])
-                    ->where(['=', 'user_id', $key])->all();
-
-                foreach ($queryName as $c => $d){
-                    $store_name[$key] = $d->name;
+                foreach ($queryGetPreference->all() as $a => $b) {
+                    $preference = $b;
+                    $count = $queryGetPreference->count();
                 }
 
 
+                foreach ($facultyId as $a => $b) {
+                    $fac = $b->faculty_id;
+                }
+
+                $queryGetFacultyUser = Profile::find()
+                    ->select(['user_id'])
+                    ->where(['=', 'faculty_id', $fac])
+                    ->andWhere(['!=', 'user_id', Yii::$app->user->identity->getId()]);
+
+                foreach ($queryGetFacultyUser->all() as $a => $b) {
+                    $key = $b->user_id;
+
+                    $queryName = Profile::find()
+                        ->select(['name'])
+                        ->where(['=', 'user_id', $key])->all();
+
+                    foreach ($queryName as $c => $d) {
+                        $store_name[$key] = $d->name;
+                    }
+
+
+                }
+
+                $queryGetFacultyUserEvent = EventJoin::find()
+                    ->select(['event_id'])
+                    ->where(['IN', 'user_id', $queryGetFacultyUser]);
+
+                $clone = clone $queryGetFacultyUserEvent;
+
+                foreach ($clone = EventJoin::find()
+                    ->select(['event_id', 'user_id'])
+                    ->where(['IN', 'user_id', $queryGetFacultyUser])->all() as $a => $b) {
+                    $key = $b->event_id;
+                    $store_data[$key] = $b->user_id;
+                }
+
+                $query1 = Event::find();
+
+                if ($count != 0) {
+                    if ($preference->weekday == 1) {
+                        $query1->andWhere(['<', 'WEEKDAY(start_date)', '6']);
+                    }
+                    if ($preference->aday >= 0) {
+                        $query1->andWhere(['=', 'datediff(start_date,end_date)', $preference->aday]);
+                    }
+                    if ($preference->paid >= 0) {
+                        $query1->orWhere(['like', 'fees', 'FREE']);
+                    }
+
+                    $query1
+                        ->andWhere(['like', 'city', $preference->location])
+                        ->orWhere(['=', 'speaker_id', $preference->speaker_id]);
+                }
+
+                $query1
+                    ->andWhere(['>=', 'start_date', date('Y-m-d')])
+                    ->andWhere(['IN', 'event.id', $queryGetFacultyUserEvent]);
+
+                $cloneQuery = clone $query1;
+
+                foreach ($cloneQuery->all() as $a => $b) {
+                    array_push($event, $b->id);
+                }
+                $queryCount1 = clone $query1;
+                $pages1 = new Pagination(['totalCount' => $queryCount1->count()]);
+                $pages1->setPageSize(5);
+
+                $results1 = $query1->offset($pages1->offset)
+                    ->limit($pages->limit)
+                    ->all();
+
             }
-
-            $queryGetFacultyUserEvent = EventJoin::find()
-                ->select(['event_id'])
-                ->where(['IN', 'user_id', $queryGetFacultyUser] );
-
-            $clone  = clone $queryGetFacultyUserEvent;
-
-            foreach ( $clone = EventJoin::find()
-                ->select(['event_id', 'user_id'])
-                ->where(['IN', 'user_id', $queryGetFacultyUser] )->all() as $a => $b) {
-                $key = $b->event_id;
-                $store_data[$key] = $b->user_id;
-            }
-
-            $query1 = Event::find();
-
-            if($preference->weekday == 1){
-                $query1 -> andWhere(['<', 'WEEKDAY(start_date)' ,'6']);
-            }
-            if($preference->aday  >= 0){
-                $query1 ->andWhere(['=', 'datediff(start_date,end_date)', $preference->aday ]);
-            }
-            if($preference->paid >= 0){
-                $query1 ->orWhere(['like','fees', 'FREE' ]);
-            }
-
-            $query1
-                ->andWhere(['like', 'city', $preference->location])
-                ->orWhere(['=', 'speaker_id', $preference->speaker_id])
-                ->andWhere(['>=', 'start_date', date('Y-m-d')])
-                ->andWhere(['IN', 'event.id', $queryGetFacultyUserEvent] );
-
-            $cloneQuery = clone $query1;
-
-            foreach ($cloneQuery->all() as $a => $b) {
-                array_push($event, $b->id);
-            }
-
             $query = Event::find();
 
             if ($model->category_id) {
@@ -188,18 +207,12 @@ class SiteController extends Controller
                 $query->andWhere(['<=', 'start_date', $model->start_date]);
             }
 
-            $query                ->andWhere(['NOT IN', 'id', implode( ",", $event)]);
+            $query->andWhere(['NOT IN', 'id', implode( ",", $event)]);
             $queryCount = clone $query;
             $pages = new Pagination(['totalCount' => $queryCount->count()]);
             $pages->setPageSize(10);
 
-            $queryCount1 = clone $query1;
-            $pages1 = new Pagination(['totalCount' => $queryCount1->count()]);
-            $pages1->setPageSize(5);
 
-            $results1 = $query1->offset($pages1->offset)
-                ->limit($pages->limit)
-                ->all();
 
             $results = $query->offset($pages->offset)
                 ->limit($pages->limit)
@@ -235,7 +248,8 @@ class SiteController extends Controller
         $store_name = [];
         $store_data = [];
         $event = [];
-
+        $queryCount1 = Event::find();
+        $results1 = [];
         $events = Event::find()->where(['>', 'start_date', date('Y-m-d')])->limit(5)->orderBy(['start_date'=>SORT_ASC])->all();
 
         if ($model->load(Yii::$app->request->get()) && $model->validate()) {
@@ -247,89 +261,100 @@ class SiteController extends Controller
             //get faculty similar faculty user (arraylist)
             $facultyUsers = [];
 
-            $queryGetFaculty = Profile::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
-            $queryGetPreference = Preferences::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
+            if(Yii::$app->user->identity != null) {
+                $queryGetFaculty = Profile::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
+                $queryGetPreference = Preferences::find()->where(['=', 'user_id', Yii::$app->user->identity->getId()]);
+                $facultyId = $queryGetFaculty->all();
+                $preference = new Preferences();
 
-            $facultyId = $queryGetFaculty->all();
-            $preference = new Preferences();
-
-            foreach ($queryGetPreference->all() as $a => $b){
-                $preference = $b;
-            }
-
-
-            foreach ($facultyId as $a => $b) {
-                $fac = $b->faculty_id;
-            }
-
-            $queryGetFacultyUser = Profile::find()
-                ->select(['user_id'])
-                ->where(['=', 'faculty_id', $fac])
-                ->andWhere(['!=', 'user_id', Yii::$app->user->identity->getId()]);
-
-            foreach ($queryGetFacultyUser->all() as $a => $b) {
-                $key = $b->user_id;
-
-                $queryName = Profile::find()
-                    ->select(['name'])
-                    ->where(['=', 'user_id', $key])->all();
-                
-                foreach ($queryName as $c => $d){
-                    $store_name[$key] = $d->name;
+                $count = 0;
+                foreach ($queryGetPreference->all() as $a => $b) {
+                    $preference = $b;
+                    $count = $queryGetPreference->count();
                 }
 
+                foreach ($facultyId as $a => $b) {
+                    $fac = $b->faculty_id;
+                }
 
+                $queryGetFacultyUser = Profile::find()
+                    ->select(['user_id'])
+                    ->where(['=', 'faculty_id', $fac])
+                    ->andWhere(['!=', 'user_id', Yii::$app->user->identity->getId()]);
+
+                foreach ($queryGetFacultyUser->all() as $a => $b) {
+                    $key = $b->user_id;
+
+                    $queryName = Profile::find()
+                        ->select(['name'])
+                        ->where(['=', 'user_id', $key])->all();
+
+                    foreach ($queryName as $c => $d) {
+                        $store_name[$key] = $d->name;
+                    }
+
+
+                }
+
+                $queryGetFacultyUserEvent = EventJoin::find()
+                    ->select(['event_id'])
+                    ->where(['IN', 'user_id', $queryGetFacultyUser]);
+
+                $clone = clone $queryGetFacultyUserEvent;
+
+                foreach ($clone = EventJoin::find()
+                    ->select(['event_id', 'user_id'])
+                    ->where(['IN', 'user_id', $queryGetFacultyUser])->all() as $a => $b) {
+                    $key = $b->event_id;
+                    $store_data[$key] = $b->user_id;
+                }
+
+                $query1 = Event::find()
+                    ->Where(['like', 'title', $model->search]);
+
+                if ($count > 0) {
+
+
+                    if ($preference->weekday == 0) {
+                        $query1->andWhere(['<', 'WEEKDAY(start_date)', '6']);
+                    }
+                    if ($preference->aday == 0) {
+                        $query1->andWhere(['=', 'datediff(start_date,end_date)', $preference->aday]);
+                    }
+                    if ($preference->paid == 0) {
+                        $query1->andWhere(['like', 'fees', 'FREE']);
+                    }
+                    $query1
+                        ->andWhere(['like', 'city', $preference->location])
+                        ->andWhere(['=', 'speaker_id', $preference->speaker_id]);
+
+                }
+
+                $query1
+                    ->andWhere(['>=', 'start_date', date('Y-m-d')])
+                    ->andWhere(['IN', 'event.id', $queryGetFacultyUserEvent]);
+
+                $cloneQuery = clone $query1;
+                $queryCount1 = clone $query1;
+                $pages1 = new Pagination(['totalCount' => $queryCount1->count()]);
+                $pages1->setPageSize(5);
+                $results1 = $query1->offset($pages1->offset)
+                    ->limit($pages1->limit)
+                    ->all();
+
+                foreach ($cloneQuery->all() as $a => $b) {
+                    array_push($event, $b->id);
+                }
             }
-
-            $queryGetFacultyUserEvent = EventJoin::find()
-                ->select(['event_id'])
-                ->where(['IN', 'user_id', $queryGetFacultyUser] );
-
-            $clone  = clone $queryGetFacultyUserEvent;
-
-            foreach ( $clone = EventJoin::find()
-                ->select(['event_id', 'user_id'])
-                ->where(['IN', 'user_id', $queryGetFacultyUser] )->all() as $a => $b) {
-                $key = $b->event_id;
-                $store_data[$key] = $b->user_id;
-            }
-
-            $query1 = Event::find();
-
-            if($preference->weekday == 1){
-                $query1 -> andWhere(['<', 'WEEKDAY(start_date)' ,'6']);
-            }
-            if($preference->aday  >= 0){
-                $query1 ->andWhere(['=', 'datediff(start_date,end_date)', $preference->aday ]);
-            }
-            if($preference->paid >= 0){
-                $query1 ->orWhere(['like','fees', 'FREE' ]);
-            }
-
-            $query1
-                ->andWhere(['like', 'city', $preference->location])
-                ->orWhere(['=', 'speaker_id', $preference->speaker_id])
-               ->andWhere(['>=', 'start_date', date('Y-m-d')])
-                ->andWhere(['IN', 'event.id', $queryGetFacultyUserEvent] );
-
-            $cloneQuery = clone $query1;
-
-            foreach ($cloneQuery->all() as $a => $b) {
-             array_push($event, $b->id);
-            }
-
             $query = Event::find()
                 ->where(['like', 'tags', $model->search])
                 ->orWhere(['like','title', $model->search])
                 ->andWhere(['NOT IN', 'id', implode( ",", $event)])
                 ->andWhere(['>=', 'start_date', date('Y-m-d')]);
 
-            $queryCount1 = clone $query1;
-            $pages1 = new Pagination(['totalCount' => $queryCount1->count()]);
-            $pages1->setPageSize(5);
-            $results1 = $query1->offset($pages1->offset)
-                ->limit($pages1->limit)
-                ->all();
+
+
+
 
             $queryCount = clone $query;
             $pages = new Pagination(['totalCount' => $queryCount->count()]);

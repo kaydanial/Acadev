@@ -16,7 +16,9 @@ use app\models\Speaker;
 
     <?= $form->field($model, 'id')->textInput() ?>
 
-    <?= $form->field($model, 'user_id')->textInput() ?>
+    <?= $form
+        ->field($model, 'user_id')
+        ->textInput(['placeholder' => Yii::$app->user->identity->getId() ] ) ?>
 
     <?= $form->field($model, 'location')->textInput(['maxlength' => true]) ?>
 

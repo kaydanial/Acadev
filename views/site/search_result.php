@@ -59,10 +59,17 @@ $this->params['breadcrumbs'][] = $this->title;
 <hr>
 
 <h5>Search result : <?php
-    echo $queryCount->count(); ?></h5>
+
+    if($result!=null)
+        echo $queryCount->count()+$recommend->count();
+    else
+        echo $queryCount->count();
+
+
+    ?></h5>
 
 <br>
-<?php if($recommend->count()>1){?>
+<?php if($result!=null){?>
 <div class="row">
 
     <div class="col-md-12">
