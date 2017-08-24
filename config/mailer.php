@@ -13,8 +13,8 @@ return [
     'transport' => [
         'class' => 'Swift_SmtpTransport',
         'host' => 'smtp.gmail.com',
-        'username' => 'acadevum@gmail.com',
-        'password' => 'dspvlqxdnjlbhqhg',
+        'username' => 'acadevent87@gmail.com',
+        'password' => 'tepungpelita',
         'port' => 465,
         'encryption' => 'ssl',
     ],
