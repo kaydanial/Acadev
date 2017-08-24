@@ -15,7 +15,7 @@ return [
         'host' => 'smtp.gmail.com',
         'username' => 'acadevent87@gmail.com',
         'password' => 'tepungpelita',
-        'port' => 465,
-        'encryption' => 'ssl',
+        'port' => 587,
+        'encryption' => 'tls',
     ],
 ];
