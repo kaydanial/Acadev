@@ -31,7 +31,7 @@ class RegistrationForm extends BaseRegistrationForm
             'info',
             Yii::t(
                 'user',
-                'Your account has been created and a message with further instructions has been sent to your email'
+                'Your account has been created and please login using your username and password registered.'
             )
         );
 
