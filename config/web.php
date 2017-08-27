@@ -59,6 +59,7 @@ $config = [
         'user' => [
             'class' => 'dektrium\user\Module',
             'admins' => ['haezal'],
+            'enableConfirmation' => false,
             'controllerMap' => [
                 'registration'  => 'app\controllers\user\RegistrationController',
                 'settings'      => 'app\controllers\user\SettingsController',
