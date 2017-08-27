@@ -38,6 +38,7 @@ class RegistrationForm extends BaseRegistrationForm
         return true;
     }
 
+    
     public function register()
     {
         if (!$this->validate()) {
