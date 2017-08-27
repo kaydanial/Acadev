@@ -37,4 +37,31 @@ class RegistrationForm extends BaseRegistrationForm
 
         return true;
     }
+
+    public function register()
+    {
+        if (!$this->validate()) {
+            return false;
+        }
+
+        /** @var User $user */
+        $user = Yii::createObject(User::className());
+        $user->setScenario('register');
+        $this->loadAttributes($user);
+
+        if (!$user->register()) {
+            return false;
+        }
+
+        Yii::$app->session->setFlash(
+            'info',
+            Yii::t(
+                'user',
+                'Your account has been created and please login using your username and password registered.'
+            )
+        );
+
+        return true;
+    }
+
 }
